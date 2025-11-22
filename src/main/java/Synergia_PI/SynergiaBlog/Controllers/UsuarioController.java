@@ -1,9 +1,9 @@
 package Synergia_PI.SynergiaBlog.Controllers;
 
-
-
 import Synergia_PI.SynergiaBlog.DTOs.LoginDTO;
 import Synergia_PI.SynergiaBlog.DTOs.UsuarioDTO;
+import Synergia_PI.SynergiaBlog.DTOs.AtualizarUsuarioDTO;
+import Synergia_PI.SynergiaBlog.DTOs.AtualizarPerfilRequestDTO;
 import Synergia_PI.SynergiaBlog.Services.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,23 +43,37 @@ public class UsuarioController {
     @Operation(summary = "Cadastrar novo usuário")
     public ResponseEntity<?> create(@Valid @RequestBody UsuarioDTO usuarioDTO) {
         try {
-            // Verificar se email já existe
-            if (usuarioService.existsByEmail(usuarioDTO.getEmail())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body("Email já cadastrado");
+            System.out.println("📱 Recebida requisição de cadastro para: " + usuarioDTO.getEmail());
+            
+            // Verificação adicional de senha no controller também
+            if (usuarioDTO.getSenha() == null || usuarioDTO.getConfirmacaoSenha() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Senha e confirmação de senha são obrigatórias");
             }
             
-            // Verificar se CPF já existe
-            if (usuarioService.existsByCpf(usuarioDTO.getCpf())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body("CPF já cadastrado");
+            if (!usuarioDTO.getSenha().equals(usuarioDTO.getConfirmacaoSenha())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Senha e confirmação de senha não coincidem");
             }
             
             UsuarioDTO createdUsuario = usuarioService.create(usuarioDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdUsuario);
+            
+        } catch (RuntimeException e) {
+            // Captura as exceções de validação do service
+            String errorMessage = e.getMessage();
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+            
+            if (errorMessage.contains("já cadastrado")) {
+                status = HttpStatus.CONFLICT;
+            }
+            
+            return ResponseEntity.status(status).body(errorMessage);
+            
         } catch (Exception e) {
+            System.out.println("💥 Erro inesperado no cadastro: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao cadastrar usuário: " + e.getMessage());
+                    .body("Erro interno ao cadastrar usuário");
         }
     }
 
@@ -75,12 +89,78 @@ public class UsuarioController {
         }
     }
 
+    // ENDPOINT ORIGINAL (para compatibilidade) - Exige todos os campos
+    @PutMapping("/{id}/completo")
+    @Operation(summary = "Atualizar usuário (completo - todos campos obrigatórios)")
+    public ResponseEntity<?> updateCompleto(
+            @PathVariable Long id, 
+            @Valid @RequestBody UsuarioDTO usuarioDTO) {
+        try {
+            System.out.println("📱 Recebida requisição PARA ATUALIZAÇÃO COMPLETA");
+            Optional<UsuarioDTO> updatedUsuario = usuarioService.update(id, usuarioDTO);
+            if (updatedUsuario.isPresent()) {
+                return ResponseEntity.ok(updatedUsuario.get());
+            } else {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Email já está em uso por outro usuário");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar usuário: " + e.getMessage());
+        }
+    }
+
+    // NOVO ENDPOINT - Atualização parcial COM confirmação de senha
     @PutMapping("/{id}")
-    @Operation(summary = "Atualizar usuário")
-    public ResponseEntity<UsuarioDTO> update(@PathVariable Long id, @Valid @RequestBody UsuarioDTO usuarioDTO) {
-        Optional<UsuarioDTO> updatedUsuario = usuarioService.update(id, usuarioDTO);
-        return updatedUsuario.map(ResponseEntity::ok)
-                           .orElse(ResponseEntity.notFound().build());
+    @Operation(summary = "Atualizar usuário (parcial - apenas campos enviados)")
+    public ResponseEntity<?> update(
+            @PathVariable Long id, 
+            @Valid @RequestBody AtualizarUsuarioDTO usuarioDTO) {
+        try {
+            System.out.println("📱 Recebida requisição para atualizar usuário ID: " + id);
+            System.out.println("Dados recebidos: " + usuarioDTO.toString());
+            
+            Optional<UsuarioDTO> updatedUsuario = usuarioService.atualizarUsuario(id, usuarioDTO);
+            
+            if (updatedUsuario.isPresent()) {
+                System.out.println("✅ Usuário atualizado com sucesso!");
+                return ResponseEntity.ok(updatedUsuario.get());
+            } else {
+                System.out.println("❌ Falha ao atualizar usuário");
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Email já está em uso, senhas não coincidem ou usuário não encontrado");
+            }
+        } catch (Exception e) {
+            System.out.println("💥 Erro ao atualizar usuário: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar usuário: " + e.getMessage());
+        }
+    }
+
+    // ENDPOINT - Atualização de perfil COM confirmação de senha
+    @PutMapping("/{id}/perfil")
+    @Operation(summary = "Atualizar perfil do usuário")
+    public ResponseEntity<?> atualizarPerfil(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarPerfilRequestDTO request) {
+        try {
+            System.out.println("📱 Recebida requisição para atualizar perfil do usuário ID: " + id);
+            
+            Optional<UsuarioDTO> updatedUsuario = usuarioService.atualizarPerfil(id, request);
+            
+            if (updatedUsuario.isPresent()) {
+                System.out.println("✅ Perfil atualizado com sucesso para usuário ID: " + id);
+                return ResponseEntity.ok(updatedUsuario.get());
+            } else {
+                System.out.println("❌ Falha ao atualizar perfil do usuário ID: " + id);
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Email já está em uso, senhas não coincidem ou usuário não encontrado");
+            }
+        } catch (Exception e) {
+            System.out.println("💥 Erro ao atualizar perfil: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar perfil: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
