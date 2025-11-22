@@ -405,6 +405,58 @@ SELECT
     END as status_data
 FROM locais l;
 
+
+# No MySQL, verifique o estado atual:
+SELECT id, status, usuario_id, local_id FROM inscricoes WHERE id = 10;
+
+SELECT id, nome, descricao, quantidade, imagem_url 
+FROM ferramentas 
+ORDER BY id;
+
+
+
+
+-- Adicionar coluna is_admin na tabela usuarios
+ALTER TABLE usuarios ADD COLUMN is_admin BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- Atualizar usuário admin existente
+UPDATE usuarios SET is_admin = TRUE WHERE email = 'admin@synergia.org';
+
+-- Inserir mais um admin de exemplo
+INSERT INTO usuarios (nome_completo, data_nascimento, cpf, email, senha, is_admin) VALUES
+('Super Admin', '1985-01-01', '99988877766', 'superadmin@synergia.org', 'senha123', TRUE);
+
+-- Atualizar a view vw_estatisticas_usuarios para incluir is_admin
+DROP VIEW IF EXISTS vw_estatisticas_usuarios;
+
+CREATE VIEW vw_estatisticas_usuarios AS
+SELECT 
+    u.id,
+    u.nome_completo,
+    u.email,
+    u.is_admin,
+    COUNT(i.id) as total_inscricoes,
+    SUM(CASE WHEN i.status = 'CONFIRMADA' THEN 1 ELSE 0 END) as inscricoes_confirmadas,
+    SUM(CASE WHEN i.status = 'PENDENTE' THEN 1 ELSE 0 END) as inscricoes_pendentes,
+    SUM(CASE WHEN i.status = 'RECUSADA' THEN 1 ELSE 0 END) as inscricoes_recusadas
+FROM usuarios u
+LEFT JOIN inscricoes i ON u.id = i.usuario_id
+GROUP BY u.id, u.nome_completo, u.email, u.is_admin;
+
+-- Procedure para obter estatísticas do sistema
+DELIMITER //
+CREATE PROCEDURE sp_obter_estatisticas_admin()
+BEGIN
+    SELECT 
+        (SELECT COUNT(*) FROM usuarios WHERE is_admin = TRUE) as total_admins,
+        (SELECT COUNT(*) FROM usuarios WHERE is_admin = FALSE) as total_voluntarios,
+        (SELECT COUNT(*) FROM locais) as total_locais,
+        (SELECT COUNT(*) FROM ferramentas) as total_ferramentas,
+        (SELECT COUNT(*) FROM inscricoes WHERE status = 'PENDENTE') as inscricoes_pendentes,
+        (SELECT COUNT(*) FROM inscricoes WHERE status = 'CONFIRMADA') as inscricoes_confirmadas,
+        (SELECT COUNT(*) FROM inscricoes WHERE status = 'RECUSADA') as inscricoes_recusadas;
+END //
+DELIMITER ;
 -- =============================================
 -- FIM DO SCRIPT
 -- =============================================
