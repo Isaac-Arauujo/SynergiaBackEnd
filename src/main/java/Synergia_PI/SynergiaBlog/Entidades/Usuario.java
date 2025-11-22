@@ -41,6 +41,9 @@ public class Usuario {
     @Column(name = "foto_perfil")
     private String fotoPerfil;
     
+    @Column(name = "is_admin", nullable = false)
+    private Boolean isAdmin = false;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -50,6 +53,7 @@ public class Usuario {
     // Construtores
     public Usuario() {
         this.createdAt = LocalDateTime.now();
+        this.isAdmin = false;
     }
     
     // Getters e Setters
@@ -73,6 +77,9 @@ public class Usuario {
     
     public String getFotoPerfil() { return fotoPerfil; }
     public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
+    
+    public Boolean getIsAdmin() { return isAdmin; }
+    public void setIsAdmin(Boolean isAdmin) { this.isAdmin = isAdmin; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

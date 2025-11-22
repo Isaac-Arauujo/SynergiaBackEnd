@@ -1,7 +1,5 @@
 package Synergia_PI.SynergiaBlog.Controllers;
 
-
-
 import Synergia_PI.SynergiaBlog.DTOs.FerramentaDTO;
 import Synergia_PI.SynergiaBlog.Services.FerramentaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/ferramentas")
@@ -40,46 +37,44 @@ public class FerramentaController {
     @GetMapping("/{id}")
     @Operation(summary = "Buscar ferramenta por ID")
     public ResponseEntity<FerramentaDTO> findById(@PathVariable Long id) {
-        Optional<FerramentaDTO> ferramenta = ferramentaService.findById(id);
-        return ferramenta.map(ResponseEntity::ok)
-                        .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/{id}/disponibilidade")
-    @Operation(summary = "Verificar disponibilidade da ferramenta")
-    public ResponseEntity<Boolean> verificarDisponibilidade(
-            @PathVariable Long id,
-            @RequestParam Integer quantidade) {
-        boolean disponivel = ferramentaService.isDisponivel(id, quantidade);
-        return ResponseEntity.ok(disponivel);
+        return ferramentaService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    @Operation(summary = "Cadastrar nova ferramenta")
+    @Operation(summary = "Criar nova ferramenta (apenas admin)")
     public ResponseEntity<FerramentaDTO> create(@Valid @RequestBody FerramentaDTO ferramentaDTO) {
-        try {
-            FerramentaDTO createdFerramenta = ferramentaService.create(ferramentaDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdFerramenta);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        FerramentaDTO createdFerramenta = ferramentaService.create(ferramentaDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdFerramenta);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Atualizar ferramenta")
-    public ResponseEntity<FerramentaDTO> update(@PathVariable Long id, @Valid @RequestBody FerramentaDTO ferramentaDTO) {
-        Optional<FerramentaDTO> updatedFerramenta = ferramentaService.update(id, ferramentaDTO);
-        return updatedFerramenta.map(ResponseEntity::ok)
-                              .orElse(ResponseEntity.notFound().build());
+    @Operation(summary = "Atualizar ferramenta (apenas admin)")
+    public ResponseEntity<FerramentaDTO> update(
+            @PathVariable Long id, 
+            @Valid @RequestBody FerramentaDTO ferramentaDTO) {
+        return ferramentaService.update(id, ferramentaDTO)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Excluir ferramenta")
+    @Operation(summary = "Excluir ferramenta (apenas admin)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (ferramentaService.delete(id)) {
             return ResponseEntity.noContent().build();
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/{id}/disponibilidade")
+    @Operation(summary = "Verificar disponibilidade da ferramenta")
+    public ResponseEntity<Boolean> isDisponivel(
+            @PathVariable Long id, 
+            @RequestParam Integer quantidade) {
+        boolean disponivel = ferramentaService.isDisponivel(id, quantidade);
+        return ResponseEntity.ok(disponivel);
     }
 }

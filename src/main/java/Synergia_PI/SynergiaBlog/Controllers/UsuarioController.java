@@ -163,6 +163,54 @@ public class UsuarioController {
         }
     }
 
+    // NOVO ENDPOINT: Promover usuário para admin
+    @PutMapping("/{id}/promover-admin")
+    @Operation(summary = "Promover usuário para administrador")
+    public ResponseEntity<?> promoverParaAdmin(@PathVariable Long id) {
+        try {
+            System.out.println("📱 Recebida requisição para promover usuário para admin ID: " + id);
+            
+            Optional<UsuarioDTO> updatedUsuario = usuarioService.promoverParaAdmin(id);
+            
+            if (updatedUsuario.isPresent()) {
+                System.out.println("✅ Usuário promovido para ADMIN com sucesso!");
+                return ResponseEntity.ok(updatedUsuario.get());
+            } else {
+                System.out.println("❌ Falha ao promover usuário para admin");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Usuário não encontrado");
+            }
+        } catch (Exception e) {
+            System.out.println("💥 Erro ao promover usuário: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao promover usuário: " + e.getMessage());
+        }
+    }
+
+    // NOVO ENDPOINT: Rebaixar admin para voluntário
+    @PutMapping("/{id}/rebaixar-voluntario")
+    @Operation(summary = "Rebaixar administrador para voluntário")
+    public ResponseEntity<?> rebaixarParaVoluntario(@PathVariable Long id) {
+        try {
+            System.out.println("📱 Recebida requisição para rebaixar admin para voluntário ID: " + id);
+            
+            Optional<UsuarioDTO> updatedUsuario = usuarioService.rebaixarParaVoluntario(id);
+            
+            if (updatedUsuario.isPresent()) {
+                System.out.println("✅ Admin rebaixado para VOLUNTÁRIO com sucesso!");
+                return ResponseEntity.ok(updatedUsuario.get());
+            } else {
+                System.out.println("❌ Falha ao rebaixar admin para voluntário");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Usuário não encontrado");
+            }
+        } catch (Exception e) {
+            System.out.println("💥 Erro ao rebaixar usuário: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao rebaixar usuário: " + e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Excluir usuário")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

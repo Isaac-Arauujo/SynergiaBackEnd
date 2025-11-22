@@ -1,6 +1,5 @@
 package Synergia_PI.SynergiaBlog.DTOs;
 
-
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
@@ -31,6 +30,8 @@ public class UsuarioDTO {
     
     private String fotoPerfil;
     
+    private Boolean isAdmin = false;
+    
     // Construtores
     public UsuarioDTO() {}
     
@@ -42,6 +43,7 @@ public class UsuarioDTO {
         this.email = email;
         this.senha = senha;
         this.confirmacaoSenha = confirmacaoSenha;
+        this.isAdmin = false;
     }
     
     // Getters e Setters
@@ -68,4 +70,7 @@ public class UsuarioDTO {
     
     public String getFotoPerfil() { return fotoPerfil; }
     public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
+    
+    public Boolean getIsAdmin() { return isAdmin; }
+    public void setIsAdmin(Boolean isAdmin) { this.isAdmin = isAdmin; }
 }

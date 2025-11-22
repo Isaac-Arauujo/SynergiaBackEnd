@@ -40,8 +40,9 @@ public class UsuarioService {
             System.out.println("=== INICIANDO CADASTRO DE USUÁRIO ===");
             System.out.println("Email: " + usuarioDTO.getEmail());
             System.out.println("Nome: " + usuarioDTO.getNomeCompleto());
+            System.out.println("Tipo: " + (Boolean.TRUE.equals(usuarioDTO.getIsAdmin()) ? "ADMIN" : "VOLUNTÁRIO"));
             
-            // VALIDAÇÃO DE SENHA - CORREÇÃO ADICIONADA
+            // VALIDAÇÃO DE SENHA
             if (!usuarioDTO.getSenha().equals(usuarioDTO.getConfirmacaoSenha())) {
                 System.out.println("❌ Senha e confirmação de senha não coincidem");
                 throw new RuntimeException("Senha e confirmação de senha não coincidem");
@@ -60,13 +61,17 @@ public class UsuarioService {
             }
             
             Usuario usuario = toEntity(usuarioDTO);
+            
+            // Por padrão, novos usuários são voluntários (não admin)
+            usuario.setIsAdmin(usuarioDTO.getIsAdmin() != null ? usuarioDTO.getIsAdmin() : false);
+            
             Usuario savedUsuario = usuarioRepository.save(usuario);
             
-            System.out.println("✅ Usuário cadastrado com sucesso: " + savedUsuario.getNomeCompleto());
+            System.out.println("✅ Usuário cadastrado com sucesso: " + savedUsuario.getNomeCompleto() + 
+                             " - Tipo: " + (savedUsuario.getIsAdmin() ? "ADMIN" : "VOLUNTÁRIO"));
             return toDTO(savedUsuario);
             
         } catch (RuntimeException e) {
-            // Re-lançar exceções de validação
             throw e;
         } catch (Exception e) {
             System.out.println("❌ Erro inesperado ao cadastrar usuário: " + e.getMessage());
@@ -197,7 +202,7 @@ public class UsuarioService {
                     System.out.println("📧 Email atualizado");
                 }
                 
-                // VALIDAÇÃO DE SENHA - CORREÇÃO ADICIONADA
+                // VALIDAÇÃO DE SENHA
                 if (request.getSenha() != null && !request.getSenha().trim().isEmpty()) {
                     if (request.getConfirmacaoSenha() == null || !request.getSenha().equals(request.getConfirmacaoSenha())) {
                         System.out.println("❌ Senha e confirmação de senha não coincidem");
@@ -236,6 +241,62 @@ public class UsuarioService {
         }
     }
 
+    // NOVO MÉTODO: Promover usuário para admin
+    @Transactional
+    public Optional<UsuarioDTO> promoverParaAdmin(Long id) {
+        try {
+            System.out.println("=== PROMOVENDO USUÁRIO PARA ADMIN ===");
+            System.out.println("ID do usuário: " + id);
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                usuario.setIsAdmin(true);
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Usuário promovido para ADMIN: " + updatedUsuario.getNomeCompleto());
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao promover usuário: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // NOVO MÉTODO: Rebaixar admin para voluntário
+    @Transactional
+    public Optional<UsuarioDTO> rebaixarParaVoluntario(Long id) {
+        try {
+            System.out.println("=== REBAIXANDO ADMIN PARA VOLUNTÁRIO ===");
+            System.out.println("ID do usuário: " + id);
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                usuario.setIsAdmin(false);
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Admin rebaixado para VOLUNTÁRIO: " + updatedUsuario.getNomeCompleto());
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao rebaixar usuário: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
     public boolean delete(Long id) {
         if (usuarioRepository.existsById(id)) {
             usuarioRepository.deleteById(id);
@@ -265,7 +326,7 @@ public class UsuarioService {
         dto.setCpf(usuario.getCpf());
         dto.setEmail(usuario.getEmail());
         dto.setFotoPerfil(usuario.getFotoPerfil());
-        // Não incluir senha no DTO por segurança
+        dto.setIsAdmin(usuario.getIsAdmin()); // INCLUIR IS_ADMIN NO DTO
         return dto;
     }
 
@@ -275,8 +336,9 @@ public class UsuarioService {
         usuario.setDataNascimento(dto.getDataNascimento());
         usuario.setCpf(dto.getCpf());
         usuario.setEmail(dto.getEmail());
-        usuario.setSenha(dto.getSenha()); // Em produção, hash da senha
+        usuario.setSenha(dto.getSenha());
         usuario.setFotoPerfil(dto.getFotoPerfil());
+        usuario.setIsAdmin(dto.getIsAdmin() != null ? dto.getIsAdmin() : false);
         return usuario;
     }
 
@@ -291,10 +353,13 @@ public class UsuarioService {
             usuario.setEmail(dto.getEmail());
         }
         if (dto.getSenha() != null && !dto.getSenha().isEmpty()) {
-            usuario.setSenha(dto.getSenha()); // Em produção, hash da senha
+            usuario.setSenha(dto.getSenha());
         }
         if (dto.getFotoPerfil() != null) {
             usuario.setFotoPerfil(dto.getFotoPerfil());
+        }
+        if (dto.getIsAdmin() != null) {
+            usuario.setIsAdmin(dto.getIsAdmin());
         }
     }
 }
