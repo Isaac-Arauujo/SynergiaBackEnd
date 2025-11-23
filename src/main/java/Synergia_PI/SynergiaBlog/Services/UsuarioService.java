@@ -1,11 +1,13 @@
 package Synergia_PI.SynergiaBlog.Services;
 
-
 import Synergia_PI.SynergiaBlog.DTOs.UsuarioDTO;
+import Synergia_PI.SynergiaBlog.DTOs.AtualizarUsuarioDTO;
+import Synergia_PI.SynergiaBlog.DTOs.AtualizarPerfilRequestDTO;
 import Synergia_PI.SynergiaBlog.Entidades.Usuario;
 import Synergia_PI.SynergiaBlog.Interfaces.Repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,19 +34,267 @@ public class UsuarioService {
                 .map(this::toDTO);
     }
 
+    @Transactional
     public UsuarioDTO create(UsuarioDTO usuarioDTO) {
-        Usuario usuario = toEntity(usuarioDTO);
-        Usuario savedUsuario = usuarioRepository.save(usuario);
-        return toDTO(savedUsuario);
+        try {
+            System.out.println("=== INICIANDO CADASTRO DE USUÁRIO ===");
+            System.out.println("Email: " + usuarioDTO.getEmail());
+            System.out.println("Nome: " + usuarioDTO.getNomeCompleto());
+            System.out.println("Tipo: " + (Boolean.TRUE.equals(usuarioDTO.getIsAdmin()) ? "ADMIN" : "VOLUNTÁRIO"));
+            
+            // VALIDAÇÃO DE SENHA
+            if (!usuarioDTO.getSenha().equals(usuarioDTO.getConfirmacaoSenha())) {
+                System.out.println("❌ Senha e confirmação de senha não coincidem");
+                throw new RuntimeException("Senha e confirmação de senha não coincidem");
+            }
+            
+            // Verificar se email já existe
+            if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
+                System.out.println("❌ Email já cadastrado: " + usuarioDTO.getEmail());
+                throw new RuntimeException("Email já cadastrado");
+            }
+            
+            // Verificar se CPF já existe
+            if (usuarioRepository.existsByCpf(usuarioDTO.getCpf())) {
+                System.out.println("❌ CPF já cadastrado: " + usuarioDTO.getCpf());
+                throw new RuntimeException("CPF já cadastrado");
+            }
+            
+            Usuario usuario = toEntity(usuarioDTO);
+            
+            // Por padrão, novos usuários são voluntários (não admin)
+            usuario.setIsAdmin(usuarioDTO.getIsAdmin() != null ? usuarioDTO.getIsAdmin() : false);
+            
+            Usuario savedUsuario = usuarioRepository.save(usuario);
+            
+            System.out.println("✅ Usuário cadastrado com sucesso: " + savedUsuario.getNomeCompleto() + 
+                             " - Tipo: " + (savedUsuario.getIsAdmin() ? "ADMIN" : "VOLUNTÁRIO"));
+            return toDTO(savedUsuario);
+            
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            System.out.println("❌ Erro inesperado ao cadastrar usuário: " + e.getMessage());
+            throw new RuntimeException("Erro interno ao cadastrar usuário");
+        }
     }
 
+    // MÉTODO ORIGINAL (para compatibilidade)
+    @Transactional
     public Optional<UsuarioDTO> update(Long id, UsuarioDTO usuarioDTO) {
-        return usuarioRepository.findById(id)
-                .map(existingUsuario -> {
-                    updateEntityFromDTO(existingUsuario, usuarioDTO);
-                    Usuario updatedUsuario = usuarioRepository.save(existingUsuario);
-                    return toDTO(updatedUsuario);
-                });
+        try {
+            System.out.println("=== ATUALIZAÇÃO COMPLETA DE USUÁRIO ===");
+            System.out.println("ID do usuário: " + id);
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                
+                // Validações de email único (se email foi alterado)
+                if (usuarioDTO.getEmail() != null && !usuarioDTO.getEmail().equals(usuario.getEmail())) {
+                    if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
+                        System.out.println("❌ Email já está em uso: " + usuarioDTO.getEmail());
+                        return Optional.empty();
+                    }
+                }
+                
+                // Atualiza todos os campos
+                updateEntityFromDTO(usuario, usuarioDTO);
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Usuário atualizado com sucesso!");
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao atualizar usuário: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // NOVO MÉTODO - Para atualização com AtualizarUsuarioDTO (com confirmação de senha)
+    @Transactional
+    public Optional<UsuarioDTO> atualizarUsuario(Long id, AtualizarUsuarioDTO request) {
+        try {
+            System.out.println("=== ATUALIZAÇÃO DE USUÁRIO (COM CONFIRMAÇÃO SENHA) ===");
+            System.out.println("ID do usuário: " + id);
+            System.out.println("Dados recebidos: " + request.toString());
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                
+                // Validação de email único (se email foi alterado)
+                if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
+                    if (usuarioRepository.existsByEmail(request.getEmail())) {
+                        System.out.println("❌ Email já está em uso: " + request.getEmail());
+                        return Optional.empty();
+                    }
+                    usuario.setEmail(request.getEmail());
+                    System.out.println("📧 Email atualizado");
+                }
+                
+                // Validação de senha e confirmação
+                if (request.getSenha() != null && !request.getSenha().trim().isEmpty()) {
+                    if (request.getConfirmacaoSenha() == null || !request.getSenha().equals(request.getConfirmacaoSenha())) {
+                        System.out.println("❌ Senha e confirmação de senha não coincidem");
+                        return Optional.empty();
+                    }
+                    usuario.setSenha(request.getSenha());
+                    System.out.println("🔑 Senha atualizada");
+                }
+                
+                // Atualiza apenas os campos que foram enviados
+                if (request.getNomeCompleto() != null) {
+                    usuario.setNomeCompleto(request.getNomeCompleto());
+                    System.out.println("👤 Nome atualizado: " + request.getNomeCompleto());
+                }
+                if (request.getDataNascimento() != null) {
+                    usuario.setDataNascimento(request.getDataNascimento());
+                    System.out.println("🎂 Data de nascimento atualizada");
+                }
+                if (request.getFotoPerfil() != null) {
+                    usuario.setFotoPerfil(request.getFotoPerfil());
+                    System.out.println("🖼️ Foto de perfil atualizada");
+                }
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Usuário atualizado com sucesso!");
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao atualizar usuário: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // MÉTODO - Para atualização com AtualizarPerfilRequestDTO (com confirmação de senha)
+    @Transactional
+    public Optional<UsuarioDTO> atualizarPerfil(Long id, AtualizarPerfilRequestDTO request) {
+        try {
+            System.out.println("=== ATUALIZAÇÃO DE PERFIL ===");
+            System.out.println("ID do usuário: " + id);
+            System.out.println("Dados recebidos: " + request.toString());
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                
+                // Validação de email único (se email foi alterado)
+                if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
+                    if (usuarioRepository.existsByEmail(request.getEmail())) {
+                        System.out.println("❌ Email já está em uso: " + request.getEmail());
+                        return Optional.empty();
+                    }
+                    usuario.setEmail(request.getEmail());
+                    System.out.println("📧 Email atualizado");
+                }
+                
+                // VALIDAÇÃO DE SENHA
+                if (request.getSenha() != null && !request.getSenha().trim().isEmpty()) {
+                    if (request.getConfirmacaoSenha() == null || !request.getSenha().equals(request.getConfirmacaoSenha())) {
+                        System.out.println("❌ Senha e confirmação de senha não coincidem");
+                        return Optional.empty();
+                    }
+                    usuario.setSenha(request.getSenha());
+                    System.out.println("🔑 Senha atualizada");
+                }
+                
+                // Atualiza apenas os campos que foram enviados
+                if (request.getNomeCompleto() != null) {
+                    usuario.setNomeCompleto(request.getNomeCompleto());
+                    System.out.println("👤 Nome atualizado: " + request.getNomeCompleto());
+                }
+                if (request.getDataNascimento() != null) {
+                    usuario.setDataNascimento(request.getDataNascimento());
+                    System.out.println("🎂 Data de nascimento atualizada");
+                }
+                if (request.getFotoPerfil() != null) {
+                    usuario.setFotoPerfil(request.getFotoPerfil());
+                    System.out.println("🖼️ Foto de perfil atualizada");
+                }
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Perfil atualizado com sucesso!");
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao atualizar perfil: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // NOVO MÉTODO: Promover usuário para admin
+    @Transactional
+    public Optional<UsuarioDTO> promoverParaAdmin(Long id) {
+        try {
+            System.out.println("=== PROMOVENDO USUÁRIO PARA ADMIN ===");
+            System.out.println("ID do usuário: " + id);
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                usuario.setIsAdmin(true);
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Usuário promovido para ADMIN: " + updatedUsuario.getNomeCompleto());
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao promover usuário: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // NOVO MÉTODO: Rebaixar admin para voluntário
+    @Transactional
+    public Optional<UsuarioDTO> rebaixarParaVoluntario(Long id) {
+        try {
+            System.out.println("=== REBAIXANDO ADMIN PARA VOLUNTÁRIO ===");
+            System.out.println("ID do usuário: " + id);
+            
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                usuario.setIsAdmin(false);
+                
+                Usuario updatedUsuario = usuarioRepository.save(usuario);
+                System.out.println("✅ Admin rebaixado para VOLUNTÁRIO: " + updatedUsuario.getNomeCompleto());
+                
+                return Optional.of(toDTO(updatedUsuario));
+            } else {
+                System.out.println("❌ Usuário não encontrado: " + id);
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erro ao rebaixar usuário: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
     }
 
     public boolean delete(Long id) {
@@ -76,7 +326,7 @@ public class UsuarioService {
         dto.setCpf(usuario.getCpf());
         dto.setEmail(usuario.getEmail());
         dto.setFotoPerfil(usuario.getFotoPerfil());
-        // Não incluir senha no DTO por segurança
+        dto.setIsAdmin(usuario.getIsAdmin()); // INCLUIR IS_ADMIN NO DTO
         return dto;
     }
 
@@ -86,8 +336,9 @@ public class UsuarioService {
         usuario.setDataNascimento(dto.getDataNascimento());
         usuario.setCpf(dto.getCpf());
         usuario.setEmail(dto.getEmail());
-        usuario.setSenha(dto.getSenha()); // Em produção, hash da senha
+        usuario.setSenha(dto.getSenha());
         usuario.setFotoPerfil(dto.getFotoPerfil());
+        usuario.setIsAdmin(dto.getIsAdmin() != null ? dto.getIsAdmin() : false);
         return usuario;
     }
 
@@ -98,11 +349,17 @@ public class UsuarioService {
         if (dto.getDataNascimento() != null) {
             usuario.setDataNascimento(dto.getDataNascimento());
         }
+        if (dto.getEmail() != null) {
+            usuario.setEmail(dto.getEmail());
+        }
         if (dto.getSenha() != null && !dto.getSenha().isEmpty()) {
-            usuario.setSenha(dto.getSenha()); // Em produção, hash da senha
+            usuario.setSenha(dto.getSenha());
         }
         if (dto.getFotoPerfil() != null) {
             usuario.setFotoPerfil(dto.getFotoPerfil());
+        }
+        if (dto.getIsAdmin() != null) {
+            usuario.setIsAdmin(dto.getIsAdmin());
         }
     }
 }

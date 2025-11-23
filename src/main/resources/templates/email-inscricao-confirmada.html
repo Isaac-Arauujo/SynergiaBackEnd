@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Inscrição Confirmada</title>
+    <style>
+        body { 
+            font-family: 'Arial', sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f4f4f4;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white;
+        }
+        .header { 
+            background: #2196F3; 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+        }
+        .content { 
+            padding: 30px; 
+        }
+        .footer { 
+            text-align: center; 
+            padding: 20px; 
+            font-size: 12px; 
+            color: #666;
+            background: #f9f9f9;
+        }
+        .info-box {
+            background: #e3f2fd;
+            padding: 20px;
+            border-left: 4px solid #2196F3;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .celebrate {
+            text-align: center;
+            font-size: 48px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Inscrição Confirmada!</h1>
+        </div>
+        <div class="content">
+            <div class="celebrate">🥳</div>
+            
+            <p>Olá <strong th:text="${nomeVoluntario}">[Nome]</strong>,</p>
+            
+            <p>Ótima notícia! Sua inscrição foi <strong style="color: #2196F3;">confirmada</strong> pela nossa equipe!</p>
+            
+            <div class="info-box">
+                <h3 style="margin-top: 0; color: #2196F3;">✅ Detalhes da Atividade Confirmada:</h3>
+                <p><strong>🏢 Local:</strong> <span th:text="${nomeLocal}">[Local]</span></p>
+                <p><strong>📅 Data:</strong> <span th:text="${dataDesejada}">[Data]</span></p>
+                <p><strong>🔄 Status:</strong> <span style="color: #4CAF50; font-weight: bold;">Confirmada ✅</span></p>
+            </div>
+            
+            <p><strong>📝 Próximos passos:</strong></p>
+            <ul>
+                <li>Chegue no local com 15 minutos de antecedência</li>
+                <li>Use roupas confortáveis e adequadas para a atividade</li>
+                <li>Traga seu entusiasmo e energia positiva!</li>
+            </ul>
+            
+            <p>Estamos muito felizes em tê-lo conosco nesta jornada de transformação!</p>
+            
+            <p>Com alegria,<br>
+            <strong>Equipe Synergia</strong> 🌟</p>
+        </div>
+        <div class="footer">
+            <p>© <span th:text="${anoAtual}">2024</span> Synergia - Juntos construímos um mundo melhor</p>
+            <p>Este é um email automático, por favor não responda.</p>
+        </div>
+    </div>
+</body>
+</html>

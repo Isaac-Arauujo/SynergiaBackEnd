@@ -1,9 +1,5 @@
 package Synergia_PI.SynergiaBlog.Controllers;
 
-//Synergia_PI.SynergiaBlog.Interfaces.Repositories.
-//Synergia_PI.SynergiaBlog.DTOs.
-//Synergia_PI.SynergiaBlog.Entidades
-
 import Synergia_PI.SynergiaBlog.DTOs.InscricaoDTO;
 import Synergia_PI.SynergiaBlog.DTOs.LocalDTO;
 import Synergia_PI.SynergiaBlog.DTOs.FerramentaDTO;
@@ -74,7 +70,24 @@ public class AdminController {
     @PutMapping("/inscricoes/{id}/confirmar")
     @Operation(summary = "Confirmar inscrição (admin)")
     public ResponseEntity<Void> confirmarInscricao(@PathVariable Long id) {
-        if (inscricaoService.confirmarInscricao(id)) {
+        System.out.println("\n🟢 === ADMIN CONTROLLER - CONFIRMAR INSCRIÇÃO ===");
+        System.out.println("🟢 Recebida requisição PUT para confirmar inscrição ID: " + id);
+        
+        // Verifica o estado ANTES
+        System.out.println("📋 ESTADO ANTES da confirmação:");
+        String estadoAntes = inscricaoService.verificarEstadoInscricao(id);
+        
+        // Executa a confirmação
+        boolean resultado = inscricaoService.confirmarInscricao(id);
+        
+        // Verifica o estado DEPOIS
+        System.out.println("📋 ESTADO DEPOIS da confirmação:");
+        String estadoDepois = inscricaoService.verificarEstadoInscricao(id);
+        
+        System.out.println("🟢 Resultado da operação: " + resultado);
+        System.out.println("🟢 === FIM ADMIN CONTROLLER ===\n");
+        
+        if (resultado) {
             return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.notFound().build();
@@ -84,7 +97,21 @@ public class AdminController {
     @PutMapping("/inscricoes/{id}/recusar")
     @Operation(summary = "Recusar inscrição (admin)")
     public ResponseEntity<Void> recusarInscricao(@PathVariable Long id) {
-        if (inscricaoService.recusarInscricao(id)) {
+        System.out.println("\n🔴 === ADMIN CONTROLLER - RECUSAR INSCRIÇÃO ===");
+        System.out.println("🔴 Recebida requisição PUT para recusar inscrição ID: " + id);
+        
+        System.out.println("📋 ESTADO ANTES da recusa:");
+        inscricaoService.verificarEstadoInscricao(id);
+        
+        boolean resultado = inscricaoService.recusarInscricao(id);
+        
+        System.out.println("📋 ESTADO DEPOIS da recusa:");
+        inscricaoService.verificarEstadoInscricao(id);
+        
+        System.out.println("🔴 Resultado da operação: " + resultado);
+        System.out.println("🔴 === FIM ADMIN CONTROLLER ===\n");
+        
+        if (resultado) {
             return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.notFound().build();
