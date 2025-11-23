@@ -1,7 +1,12 @@
 package Synergia_PI.SynergiaBlog.DTOs;
 
-import jakarta.validation.constraints.*;
 import java.time.LocalDate;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public class UsuarioDTO {
     private Long id;
@@ -24,9 +29,9 @@ public class UsuarioDTO {
     @NotBlank(message = "Senha é obrigatória")
     @Size(min = 6, message = "Senha deve ter pelo menos 6 caracteres")
     private String senha;
-    
-    @NotBlank(message = "Confirmação de senha é obrigatória")
-    private String confirmacaoSenha;
+@NotBlank(message = "Confirmação de senha é obrigatória")
+private String confirmacaoSenha;
+
     
     private String fotoPerfil;
     
@@ -73,4 +78,5 @@ public class UsuarioDTO {
     
     public Boolean getIsAdmin() { return isAdmin; }
     public void setIsAdmin(Boolean isAdmin) { this.isAdmin = isAdmin; }
+    
 }
